@@ -1,16 +1,21 @@
 class CalculadoraDosagem {
     public static double calcular (Paciente paciente, Medicamento medicamento) {
-        double dose = paciente.getPeso() * medicamento.getDosePorKg();
-        if (paciente.getIdade() <= 12) {
-            dose *= 0.7;
-        }else if (paciente.getIdade() >= 60) {
-            dose *= 0.8;
-        }
+      double doseCalculada = paciente.getPeso() * medicamento.getDosePorKg();
 
-        if (dose > medicamento.getDoseMaxima()) {
-            dose = medicamento.getDoseMaxima();
-        }
-        
-        return dose;
+      if (doseCalculada > medicamento.getDoseMaxima()) {
+        doseCalculada = medicamento.getDoseMaxima();
+      }
+
+      if (doseCalculada < 1) {
+        System.out.println("Atencao: dose e muito baixa (" + doseCalculada + " mg). Verifique os dados.");
+      } else if (paciente.getIdade() > 65) {
+        System.out.println("Atencao: paciente idoso. Dose reduzida recomendada");
+      }
+
+      if (paciente.getPeso() < 3 || paciente.getPeso() > 300) {
+        System.out.println("Dados de peso fora da faixa típica");
+      } 
+
+      return doseCalculada;
     }  
 }

@@ -1,78 +1,47 @@
+
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
+
 
 public class SitemaDosagem {
     public static void main (String[] args) {
+        InterFaceUsuario ui = new InterFaceUsuario();
         Scanner scanner = new Scanner(System.in);
 
-        Paciente paciente = null;
-        Medicamento medicamento = null;
+        List<RegistroDosagem> historico = new ArrayList<>();
 
-        int tentativasMaximas = 3;
-        int tentativas = 0;
+        boolean continuar = true;
 
-        while (paciente == null && tentativas < tentativasMaximas) {
-            try {
-        
-                System.out.println("Nome do paciente: ");
-                String nomePaciente = scanner.nextLine();
+        while (continuar) {
+            Paciente paciente = ui.criarPaciente();
+            if (paciente == null) break;
 
-                System.out.println("Digite o peso (kg): ");
-                double peso = scanner.nextDouble();
+            Medicamento medicamento = ui.criarMedicamento();
+            if (medicamento == null) break;
 
-                System.out.println("Digite a altura (m): ");
-                double altura = scanner.nextDouble();
+            double doseFinal = CalculadoraDosagem.calcular(paciente, medicamento);
 
-                System.out.println("Digite a idade: ");
-                int idade = scanner.nextInt();
+            ui.mostrarResultado(paciente, medicamento, doseFinal);
 
-                scanner.nextLine();
+            historico.add(new RegistroDosagem(paciente, medicamento, doseFinal));
 
-                paciente = new Paciente(nomePaciente, peso, altura, idade);
-            } catch (IllegalArgumentException e) {
-                tentativas++;
-                System.out.println("Erro: " + e.getMessage());
-                if (tentativas < tentativasMaximas) {
-                    System.out.println("Tente novamente (" + (tentativasMaximas - tentativas) + " tenativas restantes)");
-                }
+            System.out.println("\nDeseja calcular outro paciente? (s/n): ");
+            String resposta = scanner.nextLine();
+            if (resposta.equalsIgnoreCase("n")) {
+                continuar = false;
             }
-            scanner.nextLine();
-        }
-        
-        while (medicamento == null && tentativas < tentativasMaximas) {
-            try {
-                System.out.println("Nome do medicamento: ");
-                String nomeMedicamento = scanner.nextLine();
-
-                System.out.println("Dose recomendada por Kg (mg/kg): ");
-                double dosePorKg = scanner.nextDouble();
-
-                System.out.println("Digite maxima permitida (mg): ");
-                double doseMaxima = scanner.nextDouble();
-
-                scanner.nextLine();
-
-                medicamento = new Medicamento(nomeMedicamento, dosePorKg, doseMaxima);
-
-            } catch (IllegalArgumentException e) {
-                tentativas++;
-                System.out.println("Erro: " + e.getMessage());
-                if (tentativas < tentativasMaximas) {
-                    System.out.println("Tente novamente (" + (tentativasMaximas - tentativas) + " tenativas restantes)");
-                }
-            }
-            scanner.nextLine();
         }
 
-        if (medicamento == null && paciente == null) {
-            System.out.println("Numero maximo de tentativas atingido");
-            return;
+        System.out.println("\n==== Relatorio de Atendimentos ====");
+        for (RegistroDosagem r : historico) {
+            System.out.println(
+                "Paciente " + r.getPaciente().getNome() +
+                " | Medicamento: " + r.getMedicamento().getNome() +
+                " | Dosagem: " + r.getDoseFinal() + " mg"
+            );
         }
-                
-        double doseFinal = CalculadoraDosagem.calcular(paciente, medicamento);
 
-        System.out.println("\n===== Resultado ====");
-        System.out.println("Paciente: " + paciente.getNome());
-        System.out.println("Medicamento: " + medicamento.getNome());
-        System.out.println("Dosagem recomendada: " + doseFinal + " mg");
+        System.out.println("Encerrando Sistema");
     }
 }
