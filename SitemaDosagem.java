@@ -4,35 +4,70 @@ public class SitemaDosagem {
     public static void main (String[] args) {
         Scanner scanner = new Scanner(System.in);
 
-        System.out.println("Nome do paciente: ");
-        String nomePaciente = scanner.nextLine();
+        Paciente paciente = null;
+        Medicamento medicamento = null;
 
-        System.out.println("Digite o peso (kg): ");
-        double peso = scanner.nextDouble();
+        int tentativasMaximas = 3;
+        int tentativas = 0;
 
-        System.out.println("Digite a altura (m): ");
-        double altura = scanner.nextDouble();
+        while (paciente == null && tentativas < tentativasMaximas) {
+            try {
+        
+                System.out.println("Nome do paciente: ");
+                String nomePaciente = scanner.nextLine();
 
-        System.out.println("Digite a idade: ");
-        int idade = scanner.nextInt();
+                System.out.println("Digite o peso (kg): ");
+                double peso = scanner.nextDouble();
 
-        scanner.nextLine();
+                System.out.println("Digite a altura (m): ");
+                double altura = scanner.nextDouble();
 
-        Paciente paciente = new Paciente(nomePaciente, peso, altura, idade);
+                System.out.println("Digite a idade: ");
+                int idade = scanner.nextInt();
 
-        System.out.println("Nome do medicamento: ");
-        String nomeMedicamento = scanner.nextLine();
+                scanner.nextLine();
 
-        System.out.println("Dose recomendada por Kg (mg/kg): ");
-        double dosePorKg = scanner.nextDouble();
+                paciente = new Paciente(nomePaciente, peso, altura, idade);
+            } catch (IllegalArgumentException e) {
+                tentativas++;
+                System.out.println("Erro: " + e.getMessage());
+                if (tentativas < tentativasMaximas) {
+                    System.out.println("Tente novamente (" + (tentativasMaximas - tentativas) + " tenativas restantes)");
+                }
+            }
+            scanner.nextLine();
+        }
+        
+        while (medicamento == null && tentativas < tentativasMaximas) {
+            try {
+                System.out.println("Nome do medicamento: ");
+                String nomeMedicamento = scanner.nextLine();
 
-        System.out.println("Digite maxima permitida (mg): ");
-        double doseMaxima = scanner.nextDouble();
+                System.out.println("Dose recomendada por Kg (mg/kg): ");
+                double dosePorKg = scanner.nextDouble();
 
-        scanner.nextLine();
+                System.out.println("Digite maxima permitida (mg): ");
+                double doseMaxima = scanner.nextDouble();
 
-        Medicamento medicamento = new Medicamento(nomeMedicamento, dosePorKg, doseMaxima);
+                scanner.nextLine();
 
+                medicamento = new Medicamento(nomeMedicamento, dosePorKg, doseMaxima);
+
+            } catch (IllegalArgumentException e) {
+                tentativas++;
+                System.out.println("Erro: " + e.getMessage());
+                if (tentativas < tentativasMaximas) {
+                    System.out.println("Tente novamente (" + (tentativasMaximas - tentativas) + " tenativas restantes)");
+                }
+            }
+            scanner.nextLine();
+        }
+
+        if (medicamento == null && paciente == null) {
+            System.out.println("Numero maximo de tentativas atingido");
+            return;
+        }
+                
         double doseFinal = CalculadoraDosagem.calcular(paciente, medicamento);
 
         System.out.println("\n===== Resultado ====");

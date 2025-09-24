@@ -5,6 +5,16 @@ class Paciente {
     private int idade;
 
     public Paciente(String nome, double peso, double altura, int idade) {
+        if(peso <= 0) {
+            throw new IllegalArgumentException("Peso invalido!");
+        }
+        if(altura <= 0) {
+            throw new IllegalArgumentException("altura invalida!");
+        }
+        if(idade < 0 || idade > 150) {
+            throw new IllegalArgumentException("Idade invalida!");
+        }
+
         this.nome = nome;
         this.peso = peso;
         this.altura = altura;
