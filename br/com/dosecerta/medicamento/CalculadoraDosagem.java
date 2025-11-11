@@ -1,4 +1,8 @@
-class CalculadoraDosagem {
+package br.com.dosecerta.medicamento;
+
+import br.com.dosecerta.cadastro.Paciente;
+
+public class CalculadoraDosagem {
     public static double calcular (Paciente paciente, Medicamento medicamento) {
       double doseCalculada = paciente.getPeso() * medicamento.getDosePorKg();
 

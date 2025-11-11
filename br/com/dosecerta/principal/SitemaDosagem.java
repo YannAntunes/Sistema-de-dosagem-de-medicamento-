@@ -1,8 +1,30 @@
+/* Interface de terminal antiga - mantida apenas para referência
+package br.com.dosecerta.principal;
+
+import br.com.dosecerta.cadastro.Paciente;
+import br.com.dosecerta.medicamento.Medicamento;
+import br.com.dosecerta.medicamento.CalculadoraDosagem;
+import br.com.dosecerta.historico.Consultas;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
+class RegistroDosagem {
+    private Paciente paciente;
+    private Medicamento medicamento;
+    private double doseFinal;
+
+    public RegistroDosagem(Paciente paciente, Medicamento medicamento, double doseFinal) {
+        this.paciente = paciente;
+        this.medicamento = medicamento;
+        this.doseFinal = doseFinal;
+    }
+
+    public Paciente getPaciente() { return paciente; }
+    public Medicamento getMedicamento() { return medicamento; }
+    public double getDoseFinal() { return doseFinal; }
+}
 
 public class SitemaDosagem {
     public static void main (String[] args) {
@@ -48,7 +70,7 @@ public class SitemaDosagem {
                 } else {
                     for (int i = 0; i < historico.size(); i++) {
                         RegistroDosagem r = historico.get(i);
-                        System.out.println((i+1) + ", Paciente: " + r.getPaciente().getNome() + " | Remedio: " + r.getMedicamento().getNome() + " | Dosagem: " + r.getDoseFinal() + " mg");
+                        System.out.println((i+1) + ", br.com.dosecerta.cadastro.Paciente: " + r.getPaciente().getNome() + " | Remedio: " + r.getMedicamento().getNome() + " | Dosagem: " + r.getDoseFinal() + " mg");
                     }
                 }
                 break;
@@ -65,3 +87,4 @@ public class SitemaDosagem {
 
     }
 }
+*/

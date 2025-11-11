@@ -1,3 +1,8 @@
+/* Interface de usuário antiga - mantida apenas para referência
+package br.com.dosecerta.principal;
+
+import br.com.dosecerta.cadastro.Paciente;
+import br.com.dosecerta.medicamento.Medicamento;
 
 import java.util.Scanner;
 
@@ -18,18 +23,18 @@ public class InterFaceUsuario {
                 System.out.println("Nome do paciente: ");
                 String nomePaciente = scanner.nextLine();
 
+                System.out.println("CPF do paciente: ");
+                String cpf = scanner.nextLine();
+
                 System.out.println("Digite o peso (kg): ");
                 double peso = scanner.nextDouble();
-
-                System.out.println("Digite a altura (m): ");
-                double altura = scanner.nextDouble();
 
                 System.out.println("Digite a idade: ");
                 int idade = scanner.nextInt();
 
                 scanner.nextLine();
 
-                return new Paciente(nomePaciente, peso, altura, idade);
+                return new Paciente(nomePaciente, cpf, peso, idade);
 
             } catch (IllegalArgumentException e) {
                 tentativas++;
@@ -55,15 +60,23 @@ public class InterFaceUsuario {
                 System.out.println("Nome do medicamento: ");
                 String nomeMedicamento = scanner.nextLine();
 
+                System.out.println("Marca do medicamento: ");
+                String brand = scanner.nextLine();
+
                 System.out.println("Dose recomendada por Kg (mg/kg): ");
                 double dosePorKg = scanner.nextDouble();
 
-                System.out.println("Digite maxima permitida (mg): ");
+                System.out.println("Dose maxima permitida (mg): ");
                 double doseMaxima = scanner.nextDouble();
-
                 scanner.nextLine();
 
-                return new Medicamento(nomeMedicamento, dosePorKg, doseMaxima);
+                System.out.println("Intervalo de doses (ex: 8 em 8 horas): ");
+                String intervalo = scanner.nextLine();
+
+                System.out.println("Notas adicionais (opcional): ");
+                String notas = scanner.nextLine();
+
+                return new Medicamento(1, nomeMedicamento, brand, dosePorKg, doseMaxima, intervalo, notas);
 
             } catch (IllegalArgumentException e) {
                 tentativas++;
@@ -81,8 +94,9 @@ public class InterFaceUsuario {
     
     public void mostrarResultado(Paciente paciente, Medicamento medicamento, double doseFinal) {
         System.out.println("\n===== Resultado ====");
-        System.out.println("Paciente: " + paciente.getNome());
+        System.out.println("br.com.dosecerta.cadastro.Paciente: " + paciente.getNome());
         System.out.println("Medicamento: " + medicamento.getNome());
         System.out.println("Dosagem recomendada: " + doseFinal + " mg");
     }   
 }
+*/
