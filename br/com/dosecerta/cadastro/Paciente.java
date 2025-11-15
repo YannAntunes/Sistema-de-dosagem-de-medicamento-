@@ -9,7 +9,7 @@ public class Paciente {
     public Paciente(String nome, String cpf, double peso, int idade) {
         if(nome == null || nome.trim().isEmpty()) throw new IllegalArgumentException("Nome invalido");
         if(cpf == null || cpf.trim().isEmpty()) throw new IllegalArgumentException("CPF invalido");
-        if(peso <= 0) throw new IllegalArgumentException("Peso invalido");
+        if(peso <= 0 || peso > 500) throw new IllegalArgumentException("Peso deve estar entre 0 e 500 kg");
         if(idade < 0 || idade > 120) throw new IllegalArgumentException("Idade invalido");
 
         this.nome = nome.trim();

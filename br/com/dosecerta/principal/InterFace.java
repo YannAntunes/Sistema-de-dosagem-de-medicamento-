@@ -2,20 +2,24 @@ package br.com.dosecerta.principal;
 
 import br.com.dosecerta.banco.DataStore;
 import br.com.dosecerta.cadastro.Paciente;
+import br.com.dosecerta.calculo.TipoCalculo;
 import br.com.dosecerta.cadastro.Medico;
 import br.com.dosecerta.cadastro.Enfermeiro;
 import br.com.dosecerta.medicamento.Medicamento;
 import br.com.dosecerta.historico.Consultas;
+import br.com.dosecerta.util.ValidadorCPF;
+import br.com.dosecerta.util.GeradorReceita;
 import java.awt.*;
 import java.time.LocalDateTime;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
+import java.io.IOException;
 
 
 public class InterFace {
     private JFrame frame;
-    private DataStore store = new DataStore();
+    private final DataStore store = new DataStore();
 
     private DefaultTableModel historyTableModel;
 
@@ -34,16 +38,16 @@ public class InterFace {
             UIManager.put("nimbusBase", new Color(60, 63, 65));
             UIManager.put("nimbusBlueGrey", new Color(200, 200, 200));
             UIManager.put("text", new Color(30, 30, 30));
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (UnsupportedLookAndFeelException | ClassNotFoundException | InstantiationException | IllegalAccessException ex) {
+            System.err.println("Erro ao carregar Look and Feel: " + ex.getMessage());
         }
 
         EventQueue.invokeLater(() -> {
             try {
                 InterFace window = new InterFace();
                 window.frame.setVisible(true);
-            } catch (Exception e) {
-                e.printStackTrace();
+            } catch (Exception ex) {
+                System.err.println("Erro ao inicializar interface: " + ex.getMessage());
             }
         });
 
@@ -56,10 +60,11 @@ public class InterFace {
     }
 
     private void initialize() {
-        frame = new JFrame("Sistema de Prescricao - MVP");
+        frame = new JFrame("Sistema de Prescricao - MVP - By Yann Antunes");
         frame.setBounds(100, 100, 900, 600);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setLocationRelativeTo(null);
+        frame.setExtendedState(JFrame.MAXIMIZED_BOTH); // Tela cheia
 
         JTabbedPane tabbedPane = new JTabbedPane();
         frame.getContentPane().add(tabbedPane, BorderLayout.CENTER);
@@ -82,6 +87,8 @@ public class InterFace {
 
         JLabel lblNome = new JLabel("Nome: ");
         JTextField txtNome = new JTextField(30);
+        txtNome.setDocument(new ValidadorCPF.ApenasLetrasDocument());
+        
         JLabel lblCpf = new JLabel("CPF: ");
         JTextField txtCpf = new JTextField(14);
         JLabel lblPeso = new JLabel("Peso (Kg): ");
@@ -110,12 +117,10 @@ public class InterFace {
         JTable table = new JTable(modelPacientes);
         p.add(new JScrollPane(table), BorderLayout.CENTER);
 
-        // Carrega a lista inicial de pacientes
         for (Paciente paciente : store.getPacientes()) {
             modelPacientes.addRow(new Object[]{paciente.getNome(), paciente.getCpf(), paciente.getPeso(), paciente.getIdade()});
         }
 
-        // Adiciona botão de atualizar
         JButton btnRefresh = new JButton("Atualizar Lista");
         p.add(btnRefresh, BorderLayout.SOUTH);
         btnRefresh.addActionListener(e -> {
@@ -130,7 +135,30 @@ public class InterFace {
             try {
                 String nome = txtNome.getText();
                 String cpf = txtCpf.getText();
+                
+                if (nome.trim().isEmpty()) {
+                    JOptionPane.showMessageDialog(frame, "Nome não pode ser vazio", "Erro", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+                
+                if (!ValidadorCPF.validarCPF(cpf)) {
+                    JOptionPane.showMessageDialog(frame, "CPF invalido! Verifique o número", "Erro", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+
+                if (store.cpfJaExiste(cpf)) {
+                    JOptionPane.showMessageDialog(frame, "CPF já cadastrado! Use um CPF diferente", "Erro", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+                
+                cpf = ValidadorCPF.formatarCPF(cpf);
                 double peso = Double.parseDouble(txtPeso.getText().replace(",", "."));
+                
+                if (peso <= 0 || peso > 200) {
+                    JOptionPane.showMessageDialog(frame, "Peso deve estar entre 0 e 200 kg", "Erro", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+                
                 int idade = Integer.parseInt(txtIdade.getText());
 
                 Paciente paciente = new Paciente(nome, cpf, peso, idade);
@@ -163,8 +191,14 @@ public class InterFace {
 
         JLabel lblNome = new JLabel("Nome: ");
         JTextField txtNome = new JTextField(30);
+        txtNome.setDocument(new ValidadorCPF.ApenasLetrasDocument());
+        
         JLabel lblCrm = new JLabel("CRM: ");
         JTextField txtCrm = new JTextField(14);
+        txtCrm.setDocument(new ValidadorCPF.ApenasNumerosDocument(10));
+        
+        JLabel lblEstado = new JLabel("Estado (UF): ");
+        JTextField txtEstado = new JTextField(2);
 
         gbc.gridx = 0; gbc.gridy = 0; form.add(lblNome, gbc);
         gbc.gridx = 1; gbc.gridy = 0; form.add(txtNome, gbc);
@@ -172,8 +206,11 @@ public class InterFace {
         gbc.gridx = 0; gbc.gridy = 1; form.add(lblCrm, gbc);
         gbc.gridx = 1; gbc.gridy = 1; form.add(txtCrm, gbc);
 
+        gbc.gridx = 0; gbc.gridy = 2; form.add(lblEstado, gbc);
+        gbc.gridx = 1; gbc.gridy = 2; form.add(txtEstado, gbc);
+
         JButton btnSave = new JButton("Salvar Medico");
-        gbc.gridx = 0; gbc.gridy = 2; gbc.gridwidth = 2; form.add(btnSave, gbc);
+        gbc.gridx = 0; gbc.gridy = 3; gbc.gridwidth = 2; form.add(btnSave, gbc);
 
         p.add(form, BorderLayout.NORTH);
 
@@ -181,12 +218,10 @@ public class InterFace {
         JList<Medico> list = new JList<>(listModel);
         p.add(new JScrollPane(list), BorderLayout.CENTER);
 
-        // Carrega a lista inicial de médicos
         for (Medico m : store.getMedicos()) {
             listModel.addElement(m);
         }
 
-        // Adiciona botão de atualizar
         JButton btnRefresh = new JButton("Atualizar Lista");
         p.add(btnRefresh, BorderLayout.SOUTH);
         btnRefresh.addActionListener(e -> {
@@ -200,11 +235,23 @@ public class InterFace {
             try {
                 String nome = txtNome.getText();
                 int crm = Integer.parseInt(txtCrm.getText().trim());
-                Medico m = new Medico(nome, crm);
+                String estado = txtEstado.getText().trim();
+                
+                if (nome.isEmpty()) {
+                    JOptionPane.showMessageDialog(frame, "Nome não pode ser vazio", "Erro", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+                
+                if (estado.isEmpty() || estado.length() != 2) {
+                    JOptionPane.showMessageDialog(frame, "Estado deve ter 2 letras (ex: SP, RJ, MG)", "Erro", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+                
+                Medico m = new Medico(nome, crm, estado);
                 store.addMedico(m);
                 listModel.addElement(m);
                 JOptionPane.showMessageDialog(frame, "Medico salvo", "OK",JOptionPane.INFORMATION_MESSAGE);
-                txtNome.setText(""); txtCrm.setText("");
+                txtNome.setText(""); txtCrm.setText(""); txtEstado.setText("");
             } catch (NumberFormatException ex) {
                 JOptionPane.showMessageDialog(frame, "O CRM deve ser um número válido", "Erro", JOptionPane.ERROR_MESSAGE);
             } catch (IllegalArgumentException ex) {
@@ -218,14 +265,33 @@ public class InterFace {
         JPanel p = new JPanel(new BorderLayout());
         p.setBorder(new EmptyBorder(12,12,12,12));
 
-        JPanel form = new JPanel(new GridLayout(0,2,8,8));
-        JTextField txtNome = new JTextField();
-        JTextField txtCorem = new JTextField();
-        form.add(new JLabel("Nome: ")); form.add(txtNome);
-        form.add(new JLabel("COREM: ")); form.add(txtCorem);
+        JPanel form = new JPanel(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(6,6,6,6);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        JLabel lblNome = new JLabel("Nome: ");
+        JTextField txtNome = new JTextField(30);
+        txtNome.setDocument(new ValidadorCPF.ApenasLetrasDocument());
+        
+        JLabel lblCorem = new JLabel("COREN: ");
+        JTextField txtCorem = new JTextField(14);
+        txtCorem.setDocument(new ValidadorCPF.ApenasNumerosDocument(10));
+        
+        JLabel lblEstado = new JLabel("Estado (UF): ");
+        JTextField txtEstado = new JTextField(2);
+
+        gbc.gridx = 0; gbc.gridy = 0; form.add(lblNome, gbc);
+        gbc.gridx = 1; gbc.gridy = 0; form.add(txtNome, gbc);
+
+        gbc.gridx = 0; gbc.gridy = 1; form.add(lblCorem, gbc);
+        gbc.gridx = 1; gbc.gridy = 1; form.add(txtCorem, gbc);
+
+        gbc.gridx = 0; gbc.gridy = 2; form.add(lblEstado, gbc);
+        gbc.gridx = 1; gbc.gridy = 2; form.add(txtEstado, gbc);
 
         JButton btnSave = new JButton("Salvar Enfermeiro");
-        form.add(btnSave);
+        gbc.gridx = 0; gbc.gridy = 3; gbc.gridwidth = 2; form.add(btnSave, gbc);
 
         p.add(form, BorderLayout.NORTH);
 
@@ -233,12 +299,10 @@ public class InterFace {
         JList<Enfermeiro> list = new JList<>(listModel);
         p.add(new JScrollPane(list), BorderLayout.CENTER);
 
-        // Carrega a lista inicial de enfermeiros
         for (Enfermeiro enfermeiro : store.getEnfermeiros()) {
             listModel.addElement(enfermeiro);
         }
 
-        // Adiciona botão de atualizar
         JButton btnRefresh = new JButton("Atualizar Lista");
         p.add(btnRefresh, BorderLayout.SOUTH);
         btnRefresh.addActionListener(e -> {
@@ -250,11 +314,25 @@ public class InterFace {
 
         btnSave.addActionListener(e -> {
             try {
-                Enfermeiro enfermeiro = new Enfermeiro(txtNome.getText(), txtCorem.getText());
+                String nome = txtNome.getText();
+                String corem = txtCorem.getText().trim();
+                String estado = txtEstado.getText().trim();
+                
+                if (nome.isEmpty()) {
+                    JOptionPane.showMessageDialog(frame, "Nome não pode ser vazio", "Erro", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+                
+                if (estado.isEmpty() || estado.length() != 2) {
+                    JOptionPane.showMessageDialog(frame, "Estado deve ter 2 letras (ex: SP, RJ, MG)", "Erro", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+                
+                Enfermeiro enfermeiro = new Enfermeiro(nome, corem, estado);
                 store.addEnfermeiro(enfermeiro);
                 listModel.addElement(enfermeiro);
                 JOptionPane.showMessageDialog(frame, "Enfermeiro salvo", "OK",JOptionPane.INFORMATION_MESSAGE);
-                txtNome.setText(""); txtCorem.setText("");
+                txtNome.setText(""); txtCorem.setText(""); txtEstado.setText("");
             } catch (IllegalArgumentException ex) {
                 JOptionPane.showMessageDialog(frame, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
             }
@@ -263,129 +341,365 @@ public class InterFace {
     }
 
     private JPanel makeConsultaPainel() {
-        JPanel p = new JPanel(new BorderLayout());
-        p.setBorder(new EmptyBorder(12,12,12,12));
+    JPanel p = new JPanel(new BorderLayout());
+    p.setBorder(new EmptyBorder(12,12,12,12));
 
-        JPanel top = new JPanel(new GridBagLayout());
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(6,6,6,6);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.anchor = GridBagConstraints.WEST;
+    JPanel top = new JPanel(new GridBagLayout());
+    GridBagConstraints gbc = new GridBagConstraints();
+    gbc.insets = new Insets(6,6,6,6);
+    gbc.fill = GridBagConstraints.HORIZONTAL;
+    gbc.anchor = GridBagConstraints.WEST;
 
-        JComboBox<Medico> cbMedico = new JComboBox<>();
-        JComboBox<Paciente> cbPaciente = new JComboBox<>();
-        JComboBox<Medicamento> cbMedicamento = new JComboBox<>();
+    JComboBox<String> cbProfissional = new JComboBox<>(new String[]{"Médico", "Enfermeiro"});
 
+    JComboBox<Medico> cbMedico = new JComboBox<>();
+    JComboBox<Enfermeiro> cbEnfermeiro = new JComboBox<>();
+    JComboBox<Paciente> cbPaciente = new JComboBox<>();
+    JComboBox<Medicamento> cbMedicamento = new JComboBox<>();
+    JComboBox<TipoCalculo> cbTipoCalculo = new JComboBox<>(TipoCalculo.values());
+
+    reloadMedicoCombo(cbMedico);
+    reloadEnfermeiroCombo(cbEnfermeiro);
+    reloadPacienteCombo(cbPaciente);
+    reloadMedicamentoCombo(cbMedicamento);
+
+    cbMedicamento.addActionListener(e -> {
+        Medicamento med = (Medicamento) cbMedicamento.getSelectedItem();
+        if (med != null) {
+            cbTipoCalculo.setSelectedItem(med.getTipoPadrao());
+        }
+    });
+
+    cbProfissional.addActionListener(e -> {
+        boolean isMedico = cbProfissional.getSelectedIndex() == 0;
+        cbMedico.setVisible(isMedico);
+        cbEnfermeiro.setVisible(!isMedico);
+    });
+
+    JButton btnRefresh = new JButton("Atualizar listas");
+    btnRefresh.addActionListener(e -> {
         reloadMedicoCombo(cbMedico);
+        reloadEnfermeiroCombo(cbEnfermeiro);
         reloadPacienteCombo(cbPaciente);
         reloadMedicamentoCombo(cbMedicamento);
+    });
 
-        JButton btnRefresh = new JButton("Atualizar listas");
-        btnRefresh.addActionListener(e -> {
-            reloadMedicoCombo(cbMedico);
-            reloadPacienteCombo(cbPaciente);
-            reloadMedicamentoCombo(cbMedicamento);
-        });
+    gbc.gridx = 0; gbc.gridy = 0; top.add(new JLabel("Profissional: "), gbc);
+    gbc.gridx = 1; gbc.gridy = 0; top.add(cbProfissional, gbc);
 
-        gbc.gridx = 0; gbc.gridy = 0; top.add(new JLabel("Medico: "), gbc);
-        gbc.gridx = 1; gbc.gridy = 0; top.add(cbMedico, gbc);
-        gbc.gridx = 0; gbc.gridy = 1; top.add(new JLabel("Paciente: "), gbc);
-        gbc.gridx = 1; gbc.gridy = 1; top.add(cbPaciente, gbc);
-        gbc.gridx = 0; gbc.gridy = 2; top.add(new JLabel("Medicamento: "), gbc);
-        gbc.gridx = 1; gbc.gridy = 2; top.add(cbMedicamento, gbc);
+    gbc.gridx = 0; gbc.gridy = 1; top.add(new JLabel("Médico: "), gbc);
+    gbc.gridx = 1; gbc.gridy = 1; top.add(cbMedico, gbc);
 
-        gbc.gridx = 0; gbc.gridy = 3; top.add(btnRefresh, gbc);
+    gbc.gridx = 0; gbc.gridy = 2; top.add(new JLabel("Enfermeiro: "), gbc);
+    gbc.gridx = 1; gbc.gridy = 2; top.add(cbEnfermeiro, gbc);
+    cbEnfermeiro.setVisible(false);
 
-        p.add(top, BorderLayout.NORTH);
+    gbc.gridx = 0; gbc.gridy = 3; top.add(new JLabel("Paciente: "), gbc);
+    gbc.gridx = 1; gbc.gridy = 3; top.add(cbPaciente, gbc);
 
-        JPanel center = new JPanel(new BorderLayout());
-        JTextArea txtMedInfo = new JTextArea(8, 40);
-        txtMedInfo.setEditable(false);
-        center.add(new JScrollPane(txtMedInfo), BorderLayout.NORTH);
+    gbc.gridx = 0; gbc.gridy = 4; top.add(new JLabel("Medicamento: "), gbc);
+    gbc.gridx = 1; gbc.gridy = 4; top.add(cbMedicamento, gbc);
 
-        JButton btnShowMed = new JButton("Mostrar informacoes do Medicamento");
-        center.add(btnShowMed, BorderLayout.CENTER);
+    gbc.gridx = 0; gbc.gridy = 5; top.add(new JLabel("Tipo de Cálculo: "), gbc);
+    gbc.gridx = 1; gbc.gridy = 5; top.add(cbTipoCalculo, gbc);
 
-        JTextArea txtPrescricao = new JTextArea(6, 40);
-        txtPrescricao.setEditable(false);
-        center.add(new JScrollPane(txtPrescricao), BorderLayout.SOUTH);
+    gbc.gridx = 0; gbc.gridy = 6; top.add(btnRefresh, gbc);
 
-        p.add(center, BorderLayout.CENTER);
+    p.add(top, BorderLayout.NORTH);
 
-        JPanel bottom = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        JButton btnGenerate = new JButton("Gerar Receita / Registrar Consulta");
-        bottom.add(btnGenerate);
-        p.add(bottom, BorderLayout.SOUTH);
+    // ================= PAINEL CENTRAL =====================
 
-        btnShowMed.addActionListener(e -> {
-            Medicamento med = (Medicamento) cbMedicamento.getSelectedItem();
-            if (med == null) {
-                JOptionPane.showMessageDialog(frame, "Selecione um medicamento", "Atencao", JOptionPane.WARNING_MESSAGE);
-                return;
+    JPanel center = new JPanel(new GridLayout(3, 1, 10, 10));
+    center.setBorder(new EmptyBorder(10, 10, 10, 10));
+
+    JPanel medInfoPanel = new JPanel(new BorderLayout());
+    medInfoPanel.setBorder(BorderFactory.createTitledBorder("Informações do Medicamento"));
+
+    JButton btnShowMed = new JButton("Buscar Informações");
+    JPanel btnPanelMed = new JPanel(new FlowLayout(FlowLayout.LEFT));
+    btnPanelMed.add(btnShowMed);
+    medInfoPanel.add(btnPanelMed, BorderLayout.NORTH);
+
+    JTextArea txtMedInfo = new JTextArea(6, 40);
+    txtMedInfo.setEditable(false);
+    txtMedInfo.setLineWrap(true);
+    txtMedInfo.setWrapStyleWord(true);
+
+    medInfoPanel.add(new JScrollPane(txtMedInfo), BorderLayout.CENTER);
+    center.add(medInfoPanel);
+
+    // ========== PAINEL RESULTADO DO CÁLCULO ==========
+    JPanel calcPanel = new JPanel(new BorderLayout());
+    calcPanel.setBorder(BorderFactory.createTitledBorder("Resultado do Cálculo"));
+
+    JTextArea txtCalculo = new JTextArea(6, 40);
+    txtCalculo.setEditable(false);
+    txtCalculo.setFont(new Font("Courier New", Font.PLAIN, 12));
+    txtCalculo.setLineWrap(true);
+    txtCalculo.setWrapStyleWord(true);
+
+    calcPanel.add(new JScrollPane(txtCalculo), BorderLayout.CENTER);
+    center.add(calcPanel);
+
+    // ========== PAINEL PRESCRIÇÃO/RECEITA ==========
+    JPanel prescPanel = new JPanel(new BorderLayout());
+    prescPanel.setBorder(BorderFactory.createTitledBorder("Prescrição / Receita Médica"));
+
+    JTextArea txtPrescricao = new JTextArea(6, 40);
+    txtPrescricao.setEditable(false);
+    txtPrescricao.setFont(new Font("Courier New", Font.PLAIN, 11));
+    txtPrescricao.setLineWrap(true);
+    txtPrescricao.setWrapStyleWord(true);
+
+    prescPanel.add(new JScrollPane(txtPrescricao), BorderLayout.CENTER);
+    center.add(prescPanel);
+
+    p.add(center, BorderLayout.CENTER);
+
+    // ============= BOTÕES INFERIORES ====================
+
+    JPanel bottom = new JPanel(new FlowLayout(FlowLayout.RIGHT, 20, 10));
+    JButton btnGenerate = new JButton("Gerar Cálculo");
+    JButton btnSalvar = new JButton("Salvar Consulta / Prescrição");
+    JButton btnExportReceita = new JButton("Exportar Receita");
+
+    bottom.add(btnGenerate);
+    bottom.add(btnSalvar);
+    bottom.add(btnExportReceita);
+    p.add(bottom, BorderLayout.SOUTH);
+
+    // =============== LÓGICA DOS BOTÕES ====================
+
+    btnShowMed.addActionListener(e -> {
+        Medicamento med = (Medicamento) cbMedicamento.getSelectedItem();
+        if (med == null) {
+            JOptionPane.showMessageDialog(frame, "Selecione um medicamento!", "Erro", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        txtMedInfo.setText(
+            "Nome: " + med.getNome() + "\n" +
+            "Marca: " + med.getBrand() + "\n" +
+            "Dose/kg: " + med.getDosePorKg() + " mg\n" +
+            "Dose Máxima: " + med.getDoseMaxima() + " mg\n" +
+            "Intervalo: " + med.getIntervalo() + "\n" +
+            "Notas: " + med.getNotas()
+        );
+    });
+
+    // Variáveis para armazenar o cálculo realizado
+    final double[] doseCalculada = {0};
+    final TipoCalculo[] tipoCalculoSelecionado = {null};
+    final double[] volumeFinal = {0};
+    final double[] gotasFinal = {0};
+
+    btnGenerate.addActionListener(e -> {
+        Paciente pac = (Paciente) cbPaciente.getSelectedItem();
+        Medicamento med = (Medicamento) cbMedicamento.getSelectedItem();
+        TipoCalculo tipo = (TipoCalculo) cbTipoCalculo.getSelectedItem();
+
+        if (pac == null || med == null) {
+            JOptionPane.showMessageDialog(frame, "Selecione paciente e medicamento!", "Erro", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        double peso = pac.getPeso();
+        double doseKg = med.getDosePorKg();
+        double doseMax = med.getDoseMaxima();
+        double doseFinal = peso * doseKg;
+        if (doseFinal > doseMax) doseFinal = doseMax;
+        if (pac.getIdade() <= 12) doseFinal *= 0.7;
+        else if (pac.getIdade() >= 60) doseFinal *= 0.8;
+
+        // Armazena os dados do cálculo
+        doseCalculada[0] = doseFinal;
+        tipoCalculoSelecionado[0] = tipo;
+        volumeFinal[0] = 0;
+        gotasFinal[0] = 0;
+
+
+        // Preenche APENAS o campo de cálculo
+        String textCalculo = switch (tipo) {
+            case DOSE_MGKG -> {
+                String calc = "Cálculo por Peso (mg/kg)\n\n" +
+                    "Paciente: " + pac.getNome() + "\n" +
+                    "Medicamento: " + med.getNome() + "\n" +
+                    "Peso do paciente: " + peso + " kg\n" +
+                    "Dose por kg: " + doseKg + " mg/kg\n" +
+                    "Dose máxima: " + doseMax + " mg\n" +
+                    "Idade do paciente: " + pac.getIdade() + " anos\n" +
+                    "Tipo de cálculo: " + med.getTipoPadrao() + "\n\n" +
+                    ">>> Dose final calculada: " + String.format("%.2f", doseFinal) + " mg <<<";
+                volumeFinal[0] = 0;
+                gotasFinal[0] = 0;
+                yield calc;
             }
-            StringBuilder sb = new StringBuilder();
-            sb.append("Nome: ").append(med.getNome()).append("\n");
-            sb.append("Marca: ").append(med.getBrand()).append("\n");
-            sb.append("Dose por kg (mg / kg): ").append(med.getDosePorKg()).append("\n");
-            sb.append("Dose maxima (mg): ").append(med.getDoseMaxima()).append("\n");
-            sb.append("Intervalo: ").append(med.getIntervalo()).append("\n");
-            sb.append("Notas: ").append(med.getNotas()).append("\n");
-            txtMedInfo.setText(sb.toString());
+            case VOLUME_MLH -> {
+                double volumeDisp = med.getVolumeDisponivel();
+                double doseDisp = med.getDoseDisponivel();
+                double volCalculado = (doseFinal * volumeDisp) / doseDisp;
+                volumeFinal[0] = volCalculado;
+                gotasFinal[0] = 0;
+                String calc = "Cálculo de Volume (mL/h)\n\n" +
+                    "Paciente: " + pac.getNome() + "\n" +
+                    "Medicamento: " + med.getNome() + "\n" +
+                    "Dose calculada: " + String.format("%.2f", doseFinal) + " mg\n" +
+                    "Volume disponível: " + volumeDisp + " mL\n" +
+                    "Dose disponível: " + doseDisp + " mg\n\n" +
+                    ">>> Volume final a infundir: " + String.format("%.2f", volCalculado) + " mL <<<";
+                yield calc;
+            }
+            case GOTAS_MIN -> {
+                double volume = med.getVolumeDisponivel();
+                int fator = med.getFatorGotejamento();
+                int tempoMin = med.getTempoMinutos();
+                double gotasCalculadas = (volume * fator) / tempoMin;
+                volumeFinal[0] = 0;
+                gotasFinal[0] = gotasCalculadas;
+                String calc = "Cálculo de Gotejamento\n\n" +
+                    "Paciente: " + pac.getNome() + "\n" +
+                    "Medicamento: " + med.getNome() + "\n" +
+                    "Volume a infundir: " + volume + " mL\n" +
+                    "Fator de gotejamento: " + fator + " gotas/mL\n" +
+                    "Tempo de infusão: " + tempoMin + " minutos\n\n" +
+                    ">>> Gotas por minuto: " + String.format("%.1f", gotasCalculadas) + " <<<";
+                yield calc;
+            }
+        };
 
-            Paciente paciente = (Paciente) cbPaciente.getSelectedItem();
-            if (paciente != null) {
-                double dose = paciente.getPeso() * med.getDosePorKg();
-                if (dose > med.getDoseMaxima()) dose = med.getDoseMaxima();
-                if (paciente.getIdade() <= 12) dose *= 0.7;
-                else if (paciente.getIdade() >= 60) dose *= 0.8;
+        txtCalculo.setText(textCalculo);
+        txtPrescricao.setText(""); // Limpa a prescrição até salvar
+    });
 
-                txtPrescricao.setText("Dose estimada: " + String.format("%.2f", dose) + " mg\nIntervalo: " + med.getIntervalo() + "\nObservações: " + med.getNotas());
+    btnSalvar.addActionListener(e -> {
+        Paciente pac = (Paciente) cbPaciente.getSelectedItem();
+        Medicamento med = (Medicamento) cbMedicamento.getSelectedItem();
+        
+        if (pac == null || med == null) {
+            JOptionPane.showMessageDialog(frame, "Selecione paciente e medicamento!", "Erro", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        if (doseCalculada[0] == 0 || tipoCalculoSelecionado[0] == null) {
+            JOptionPane.showMessageDialog(frame, "Gere um cálculo primeiro com o botão 'Gerar Cálculo'!", "Erro", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        try {
+            String nomeProf;
+            if (cbProfissional.getSelectedIndex() == 0) {
+                Medico medico = (Medico) cbMedico.getSelectedItem();
+                if (medico == null) {
+                    JOptionPane.showMessageDialog(frame, "Selecione um médico!", "Erro", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+                nomeProf = medico.getNome();
+                Consultas c = new Consultas(medico, pac, med, doseCalculada[0], LocalDateTime.now(), med.getNotas());
+                
+                // Configura o tipo de cálculo e o resultado específico
+                c.setTipoCalculo(tipoCalculoSelecionado[0]);
+                switch (tipoCalculoSelecionado[0]) {
+                    case DOSE_MGKG -> {
+                        c.setResultadoCalculo(doseCalculada[0]);
+                        c.setUnidadeResultado("mg");
+                    }
+                    case VOLUME_MLH -> {
+                        c.setResultadoCalculo(volumeFinal[0]);
+                        c.setUnidadeResultado("mL");
+                    }
+                    case GOTAS_MIN -> {
+                        c.setResultadoCalculo(gotasFinal[0]);
+                        c.setUnidadeResultado("gotas/min");
+                    }
+                }
+                
+                store.addConsultas(c);
+                addHistoricoRow(c);
             } else {
-                txtPrescricao.setText("Selecione um paciente para ver dose estimada");
+                Enfermeiro enfermeiro = (Enfermeiro) cbEnfermeiro.getSelectedItem();
+                if (enfermeiro == null) {
+                    JOptionPane.showMessageDialog(frame, "Selecione um enfermeiro!", "Erro", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+                nomeProf = enfermeiro.getNome();
+                Consultas c = new Consultas(enfermeiro, pac, med, doseCalculada[0], LocalDateTime.now(), med.getNotas());
+                
+                // Configura o tipo de cálculo e o resultado específico
+                c.setTipoCalculo(tipoCalculoSelecionado[0]);
+                switch (tipoCalculoSelecionado[0]) {
+                    case DOSE_MGKG -> {
+                        c.setResultadoCalculo(doseCalculada[0]);
+                        c.setUnidadeResultado("mg");
+                    }
+                    case VOLUME_MLH -> {
+                        c.setResultadoCalculo(volumeFinal[0]);
+                        c.setUnidadeResultado("mL");
+                    }
+                    case GOTAS_MIN -> {
+                        c.setResultadoCalculo(gotasFinal[0]);
+                        c.setUnidadeResultado("gotas/min");
+                    }
+                }
+                
+                store.addConsultas(c);
+                addHistoricoRow(c);
             }
-        });
 
-        btnGenerate.addActionListener(e -> {
-            Medico medico = (Medico) cbMedico.getSelectedItem();
-            Paciente paciente = (Paciente) cbPaciente.getSelectedItem();
-            Medicamento med = (Medicamento) cbMedicamento.getSelectedItem();
+            // Preenche APENAS AGORA o painel de receita com dados específicos do cálculo
+            String tipoProf = cbProfissional.getSelectedIndex() == 0 ? "Médico" : "Enfermeiro";
+            String prescricao = gerarReceitaComCalculoEspecifico(
+                LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")),
+                pac.getNome(),
+                nomeProf,
+                tipoProf,
+                med.getNome(),
+                doseCalculada[0],
+                med.getIntervalo(),
+                med.getNotas(),
+                tipoCalculoSelecionado[0],
+                volumeFinal[0],
+                gotasFinal[0]
+            );
+            
+            txtPrescricao.setText(prescricao);
+            JOptionPane.showMessageDialog(frame, "Consulta registrada e receita gerada!", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+        } catch (NullPointerException ex) {
+            JOptionPane.showMessageDialog(frame, "Erro ao salvar: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+        }
+    });
 
-            if (medico == null || paciente == null || med == null) {
-                JOptionPane.showMessageDialog(frame, "Selecione medico, paciente e medicamento", "Atencao", JOptionPane.WARNING_MESSAGE);
-                return ;
+    btnExportReceita.addActionListener(e -> {
+        String conteudo = txtPrescricao.getText();
+        
+        if (conteudo == null || conteudo.trim().isEmpty()) {
+            JOptionPane.showMessageDialog(frame, "Gere uma prescrição primeiro!", "Aviso", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("Salvar Receita");
+        fileChooser.setSelectedFile(new java.io.File("Prescricao_" + System.currentTimeMillis() + ".txt"));
+        
+        int resultado = fileChooser.showSaveDialog(frame);
+        
+        if (resultado == JFileChooser.APPROVE_OPTION) {
+            try {
+                GeradorReceita.gerarReceita(fileChooser.getSelectedFile().getAbsolutePath(), conteudo);
+                JOptionPane.showMessageDialog(frame, "Receita exportada com sucesso!\n" + fileChooser.getSelectedFile().getAbsolutePath(), "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            } catch (IOException ex) {
+                JOptionPane.showMessageDialog(frame, "Erro ao exportar: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
             }
+        }
+    });
 
-            double dose = paciente.getPeso() * med.getDosePorKg();
-            if (dose > med.getDoseMaxima()) dose = med.getDoseMaxima();
-            if (paciente.getIdade() <= 12) dose *= 0.7;
-            else if (paciente.getIdade() >= 60) dose *= 0.8;
-
-            Consultas c = new Consultas(medico, paciente, med, dose, LocalDateTime.now(), med.getNotas());
-            store.addConsultas(c);
-            addHistoricoRow(c);
-
-            StringBuilder pres = new StringBuilder();
-            pres.append("=== RECEITA ===\n");
-            pres.append("Data: ").append(c.getFormattedTimestamp()).append("\n");
-            pres.append("Paciente: ").append(paciente.getNome()).append("\n");
-            pres.append("Medico: ").append(medico.getNome()).append("\n");
-            pres.append("Medicamento: ").append(med.getNome()).append("\n");
-            pres.append("Dose: ").append(String.format("%.2f", dose)).append("mg\n");
-            pres.append("Intervalo: ").append(med.getIntervalo()).append("\n");
-            pres.append("Observações: ").append(med.getNotas()).append("\n");
-
-            txtPrescricao.setText(pres.toString());
-            JOptionPane.showMessageDialog(frame, "Consulta registrada e receita gerada", "OK", JOptionPane.INFORMATION_MESSAGE);
-        });
-
-        return p;
-    }
+    return p;
+}
 
     private JPanel makeHistoricoPainel() {
         JPanel p = new JPanel(new BorderLayout());
         p.setBorder(new EmptyBorder(12,12,12,12));
         
-        historyTableModel = new DefaultTableModel(new Object[]{"Data", "Paciente", "Medico", "Medicamento", "Dose (mg)"}, 0);
+        historyTableModel = new DefaultTableModel(new Object[]{"Data", "Paciente", "Medico / Enfermeiro", "Medicamento", "Resultado"}, 0);
         JTable table = new JTable(historyTableModel);
         p.add(new JScrollPane(table), BorderLayout.CENTER);
 
@@ -400,6 +714,12 @@ public class InterFace {
         cb.removeAllItems();
         for (Medico m : store.getMedicos()) cb.addItem(m);
     }
+    
+    private void reloadEnfermeiroCombo (JComboBox<Enfermeiro> cb) {
+        cb.removeAllItems();
+        for (Enfermeiro e : store.getEnfermeiros()) cb.addItem(e);
+    }
+    
     private void reloadPacienteCombo (JComboBox<Paciente> cb) {
         cb.removeAllItems();
         for (Paciente p : store.getPacientes()) cb.addItem(p);
@@ -413,10 +733,63 @@ public class InterFace {
         historyTableModel.addRow(new Object[]{
                 c.getFormattedTimestamp(),
                 c.getPaciente().getNome(),
-                c.getMedico().getNome(),
+                c.getNomeProfissional(),
                 c.getMedicamento().getNome(),
-                String.format("%.2f", c.getCalcularDose())
+                c.getResultadoFormatado()
         });
+    }
+
+    private String gerarReceitaComCalculoEspecifico(String data, String paciente, String profissional,
+                                                    String tipoProf, String medicamento, double dose,
+                                                    String intervalo, String observacoes,
+                                                    TipoCalculo tipoCalculo, double volume, double gotas) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("╔════════════════════════════════════════════════════════════════════╗\n");
+        sb.append("║                          RECEITA MÉDICA                             ║\n");
+        sb.append("╚════════════════════════════════════════════════════════════════════╝\n\n");
+        
+        sb.append("Data: ").append(data).append("\n");
+        sb.append("Paciente: ").append(paciente).append("\n");
+        sb.append(tipoProf).append(": ").append(profissional).append("\n\n");
+        
+        sb.append("┌────────────────────────────────────────────────────────────────────┐\n");
+        sb.append("│ MEDICAMENTO                                                        │\n");
+        sb.append("└────────────────────────────────────────────────────────────────────┘\n");
+        sb.append("Medicamento: ").append(medicamento).append("\n");
+        sb.append("Intervalo: ").append(intervalo).append("\n\n");
+        
+        sb.append("┌────────────────────────────────────────────────────────────────────┐\n");
+        sb.append("│ RESULTADO DO CÁLCULO                                               │\n");
+        sb.append("└────────────────────────────────────────────────────────────────────┘\n");
+        
+        switch (tipoCalculo) {
+            case DOSE_MGKG -> {
+                sb.append("Tipo de Cálculo: Dose (mg/kg)\n");
+                sb.append("Dose Final: ").append(String.format("%.2f", dose)).append(" mg\n\n");
+            }
+            case VOLUME_MLH -> {
+                sb.append("Tipo de Cálculo: Volume (mL/h)\n");
+                sb.append("Dose Prescrita: ").append(String.format("%.2f", dose)).append(" mg\n");
+                sb.append("Volume Final a Infundir: ").append(String.format("%.2f", volume)).append(" mL\n\n");
+            }
+            case GOTAS_MIN -> {
+                sb.append("Tipo de Cálculo: Gotejamento (gotas/min)\n");
+                sb.append("Gotas por Minuto: ").append(String.format("%.1f", gotas)).append(" gotas/min\n\n");
+            }
+        }
+        
+        sb.append("┌────────────────────────────────────────────────────────────────────┐\n");
+        sb.append("│ OBSERVAÇÕES                                                        │\n");
+        sb.append("└────────────────────────────────────────────────────────────────────┘\n");
+        sb.append(observacoes.isEmpty() ? "Sem observações" : observacoes).append("\n\n");
+        
+        sb.append("_____________________________\n");
+        sb.append("Assinatura do Profissional\n\n");
+        
+        sb.append("Gerado pelo Sistema de Dosagem\n");
+        sb.append("╚════════════════════════════════════════════════════════════════════╝\n");
+        
+        return sb.toString();
     }
 }
 
