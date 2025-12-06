@@ -73,6 +73,22 @@ public class Consultas {
         return profissional.equals("medico") ? medico.getNome() : enfermeiro.getNome();
     }
 
+    public String getProfissionalNome() {
+        return getNomeProfissional();
+    }
+
+    public String getProfissionalTipo() {
+        return profissional.equals("medico") ? "Médico" : "Enfermeiro";
+    }
+
+    public double getDoseCalculada() {
+        return calcularDose;
+    }
+
+    public String getObservacao() {
+        return observacoes;
+    }
+
     public double getCalcularDose() {
         return calcularDose;
     }

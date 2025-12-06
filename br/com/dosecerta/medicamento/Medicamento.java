@@ -19,9 +19,7 @@ public class Medicamento {
     private int tempoMinutos;          // tempo da infusão
     private TipoCalculo tipoPadrao;    // cálculo padrão para o medicamento
 
-    // ==========================================================
     // ============== CONSTRUTOR COMPLETO =======================
-    // ==========================================================
 
     public Medicamento(
             int id,
@@ -79,9 +77,7 @@ public class Medicamento {
     }
 
 
-    // ==========================================================
     // ===================== GETTERS ============================
-    // ==========================================================
 
     public int getId() {
         return id;
@@ -131,9 +127,70 @@ public class Medicamento {
         return tipoPadrao;
     }
 
-    // ==========================================================
+    public double getConcentracaoMgPorMl() {
+        if (volumeDisponivel == 0) {
+            return 0;
+        }
+        return doseDisponivel / volumeDisponivel;
+    }
+
+    // ===================== SETTERS ============================
+
+    public void setNome(String nome) {
+        if (nome == null || nome.trim().isEmpty())
+            throw new IllegalArgumentException("Nome inválido.");
+        this.nome = nome.trim();
+    }
+
+    public void setBrand(String brand) {
+        this.brand = (brand == null) ? "" : brand.trim();
+    }
+
+    public void setDosePorKg(double dosePorKg) {
+        if (dosePorKg <= 0)
+            throw new IllegalArgumentException("dosePorKg deve ser maior que zero.");
+        this.dosePorKg = dosePorKg;
+    }
+
+    public void setDoseMaxima(double doseMaxima) {
+        if (doseMaxima <= 0)
+            throw new IllegalArgumentException("doseMaxima deve ser maior que zero.");
+        this.doseMaxima = doseMaxima;
+    }
+
+    public void setIntervalo(String intervalo) {
+        this.intervalo = (intervalo == null) ? "" : intervalo.trim();
+    }
+
+    public void setNotas(String notas) {
+        this.notas = (notas == null) ? "" : notas.trim();
+    }
+
+    public void setDoseDisponivel(double doseDisponivel) {
+        if (doseDisponivel <= 0)
+            throw new IllegalArgumentException("doseDisponivel deve ser maior que zero.");
+        this.doseDisponivel = doseDisponivel;
+    }
+
+    public void setVolumeDisponivel(double volumeDisponivel) {
+        if (volumeDisponivel <= 0)
+            throw new IllegalArgumentException("volumeDisponivel deve ser maior que zero.");
+        this.volumeDisponivel = volumeDisponivel;
+    }
+
+    public void setFatorGotejamento(int fatorGotejamento) {
+        if (fatorGotejamento < 0)
+            throw new IllegalArgumentException("fatorGotejamento não pode ser negativo.");
+        this.fatorGotejamento = fatorGotejamento;
+    }
+
+    public void setTempoMinutos(int tempoMinutos) {
+        if (tempoMinutos < 0)
+            throw new IllegalArgumentException("tempoMinutos não pode ser negativo.");
+        this.tempoMinutos = tempoMinutos;
+    }
+
     // ===================== TO STRING ==========================
-    // ==========================================================
 
     @Override
     public String toString() {

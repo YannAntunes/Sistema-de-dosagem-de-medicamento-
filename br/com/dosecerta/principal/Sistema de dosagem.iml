@@ -2,8 +2,13 @@
 <module type="JAVA_MODULE" version="4">
   <component name="NewModuleRootManager" inherit-compiler-output="true">
     <exclude-output />
+<<<<<<< HEAD
     <content url="file://$MODULE_DIR$/../dosecerta/principal">
       <sourceFolder url="file://$MODULE_DIR$/../dosecerta/principal" isTestSource="false" />
+=======
+    <content url="file://$MODULE_DIR$/..">
+      <sourceFolder url="file://$MODULE_DIR$/.." isTestSource="false" />
+>>>>>>> 3596583 (Reorganizacao do codigo deixando ele mais limpo, facil de ler e da manuntencao / Implementacao da aba Medicamento para cadastro de novos remedios / Adicao de botoes de edicao e exclusao)
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
