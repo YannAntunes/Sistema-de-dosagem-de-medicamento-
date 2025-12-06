@@ -7,9 +7,12 @@ import br.com.dosecerta.principal.Painel.HistoricoPanel;
 import br.com.dosecerta.principal.Painel.MedicoPanel;
 import br.com.dosecerta.principal.Painel.MedicamentoPanel;
 import br.com.dosecerta.principal.Painel.PacientePanel;
+import br.com.dosecerta.seguranca.Usuario;
 
 import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+
 /**
  * Classe principal que inicializa a interface gráfica do sistema de dosagem de medicamentos.
  * Utiliza Swing para criar uma interface modular com abas para diferentes funcionalidades.
@@ -20,9 +23,11 @@ public class InterFace {
 
     private final JFrame frame;
     private final DataStore store;
+    private final Usuario usuarioLogado;
 
-    public InterFace() {
-        this.store = new DataStore();
+    public InterFace(DataStore store, Usuario usuarioLogado) {
+        this.store = store;
+        this.usuarioLogado = usuarioLogado;
         this.frame = buildFrame();
     }
 
@@ -39,7 +44,8 @@ public class InterFace {
             UIManager.put("nimbusBase", new Color(60, 63, 65));
             UIManager.put("nimbusBlueGrey", new Color(200, 200, 200));
             UIManager.put("text", new Color(30, 30, 30));
-        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | UnsupportedLookAndFeelException ex) {
+        } catch (ClassNotFoundException | InstantiationException
+                 | IllegalAccessException | UnsupportedLookAndFeelException ex) {
             System.err.println("Erro ao definir look & feel: " + ex.getMessage());
         }
     }
@@ -53,22 +59,37 @@ public class InterFace {
         f.setSize(1024, 768);
         f.setLocationRelativeTo(null);
 
+        // Painéis e abas
         JTabbedPane tabs = new JTabbedPane();
 
-        tabs.addTab("Pacientes", new PacientePanel(store));
-        tabs.addTab("Médicos", new MedicoPanel(store));
-        tabs.addTab("Enfermeiros", new EnfermeiroPanel(store));
-        tabs.addTab("Medicamentos", new MedicamentoPanel(store));
-        tabs.addTab("Consulta", new ConsultaPanel(store, buildHistoricoModel()));
-        tabs.addTab("Histórico", new HistoricoPanel(store));
+        // Modelo compartilhado de histórico
+        DefaultTableModel historicoModel = buildHistoricoModel();
+
+        // Painéis principais
+        PacientePanel pacientePanel       = new PacientePanel(store);
+        MedicoPanel medicoPanel           = new MedicoPanel(store);
+        EnfermeiroPanel enfermeiroPanel   = new EnfermeiroPanel(store);
+        MedicamentoPanel medicamentoPanel = new MedicamentoPanel(store);
+        ConsultaPanel consultaPanel       = new ConsultaPanel(store, historicoModel);
+        HistoricoPanel historicoPanel     = new HistoricoPanel(store);
+
+        // Abas
+        tabs.addTab("Pacientes", pacientePanel);
+        tabs.addTab("Médicos", medicoPanel);
+        tabs.addTab("Enfermeiros", enfermeiroPanel);
+        tabs.addTab("Medicamentos", medicamentoPanel);
+        tabs.addTab("Consulta", consultaPanel);
+        tabs.addTab("Histórico", historicoPanel);
+
+        GerenciadorPermissoes.aplicarPermissoes(usuarioLogado, tabs);
 
         f.getContentPane().add(tabs, BorderLayout.CENTER);
         return f;
     }
 
-    private javax.swing.table.DefaultTableModel buildHistoricoModel() {
-        String[] cols = new String[] {"Data", "Paciente", "Profissional", "Medicamento", "Resultado"};
-        return new javax.swing.table.DefaultTableModel(cols, 0) {
+    private DefaultTableModel buildHistoricoModel() {
+        String[] cols = new String[]{"Data", "Paciente", "Profissional", "Medicamento", "Resultado"};
+        return new DefaultTableModel(cols, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
                 return false;
@@ -81,6 +102,19 @@ public class InterFace {
     }
 
     public static void main(String[] args) {
-        new InterFace().show();
+        SwingUtilities.invokeLater(() -> {
+            DataStore store = new DataStore();
+
+            LoginDialog login = new LoginDialog(null, store);
+            login.setVisible(true);
+
+            Usuario usuario = login.getUsuarioAutenticado();
+            if (usuario == null) {
+                System.exit(0); // cancelou
+            }
+
+            InterFace app = new InterFace(store, usuario);
+            app.show();
+        });
     }
 }
